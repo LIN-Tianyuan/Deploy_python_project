@@ -1,0 +1,47 @@
+$projectName = "Helloworld"
+
+$source_path = "C:\Users\Alex\pythonProject\$projectName"
+$destination_path = "D:\Project"
+$env_path = "D:\HOMEWARE\Miniconda3-Windows-x86_64\envs"
+
+$computerName = python $source_path\read_toml.py $source_path\pyproject.toml remote.computer_name
+$pythonVersion = python $source_path\read_toml.py $source_path\pyproject.toml project.requires-python
+$dependency = python $source_path\read_toml.py $source_path\pyproject.toml project.dependency
+
+$session = new-pssession -ComputerName $computerName
+
+Invoke-Command -Session $session -ScriptBlock {
+    if (Get-Service $using:projectName -ErrorAction SilentlyContinue) {
+        if((Get-Service $using:projectName).Status -eq "Running") {
+            Stop-Service $using:projectName
+        }
+        nssm remove $using:projectName confirm
+    }
+    Exit
+}
+
+$session = new-pssession -ComputerName $computerName
+
+Invoke-Command -Session $session -ScriptBlock {
+    $newfilepath = "$using:destination_path\$using:projectName"
+    if(Test-Path $newfilepath) {
+        Remove-Item $newfilepath -Force -Recurse
+    }
+}
+
+Copy-Item $source_path -Destination $destination_path -ToSession $session -Recurse
+
+Invoke-Command -ComputerName $computerName -ConfigurationName Userprofile -ScriptBlock {
+    conda remove --name $using:projectName --all
+    conda create -n $using:projectName python==$using:pythonVersion
+    conda activate $using:projectName
+    conda env list
+    cd $using:destination_path\$using:projectName
+    pip install -r $using:dependency
+}
+
+Invoke-Command -Session $session -ScriptBlock {
+    nssm install $using:projectName "$using:env_path\$using:projectName\python.exe" "$using:destination_path\$using:projectName\main.py"
+    nssm start $using:projectName
+}
+

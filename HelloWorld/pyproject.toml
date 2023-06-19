@@ -1,0 +1,13 @@
+title = "HelloWorld toml"
+
+[project]
+name = "HelloWorld"
+requires-python = "3.10"
+dependency = "requirements.txt"
+
+[project.author]
+name = "LIN"
+email = "sgsgkxkx@gmail.com"
+
+[remote]
+computer_name = "SRVCLDMSTD007"
